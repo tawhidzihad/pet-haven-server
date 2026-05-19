@@ -10,7 +10,7 @@ app.use(express.json());
 const port = process.env.PORT;
 const uri = process.env.MONGODB_URI;
 
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const dns = require("node:dns");
 dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
@@ -28,14 +28,24 @@ async function run() {
 		const db = client.db("pet-haven");
 		const petsCollection = db.collection("pets");
 
+		app.post("/pet", async (req, res) => {
+			const petData = req.body;
+			const result = await petsCollection.insertOne(petData);
+			res.json(result);
+		});
+
 		app.get("/pet", async (req, res) => {
 			const result = await petsCollection.find().toArray();
 			res.json(result);
 		});
 
-		app.post("/pet", async (req, res) => {
-			const petData = req.body;
-			const result = await petsCollection.insertOne(petData);
+		app.delete("/pet/:id", async (req, res) => {
+			const { id } = req.params;
+
+			const result = await petsCollection.deleteOne({
+				_id: new ObjectId(id),
+			});
+
 			res.json(result);
 		});
 
