@@ -28,17 +28,20 @@ async function run() {
 		const db = client.db("pet-haven");
 		const petsCollection = db.collection("pets");
 
+		// App New pet
 		app.post("/pet", async (req, res) => {
 			const petData = req.body;
 			const result = await petsCollection.insertOne(petData);
 			res.json(result);
 		});
 
+		// Get All Pets
 		app.get("/pet", async (req, res) => {
 			const result = await petsCollection.find().toArray();
 			res.json(result);
 		});
 
+		// Get Single pet
 		app.get("/pet/:id", async (req, res) => {
 			const { id } = req.params;
 
@@ -48,6 +51,22 @@ async function run() {
 			res.json(result);
 		});
 
+		// Update Single Pet
+		app.patch("/pet/:id", async (req, res) => {
+			const { id } = req.params;
+			const updatedPetData = req.body;
+
+			const result = await petsCollection.updateOne(
+				{
+					_id: new ObjectId(id),
+				},
+				{ $set: updatedPetData },
+			);
+
+			res.json(result);
+		});
+
+		// Delete Single Pet
 		app.delete("/pet/:id", async (req, res) => {
 			const { id } = req.params;
 
