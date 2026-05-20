@@ -27,11 +27,26 @@ async function run() {
 		await client.connect();
 		const db = client.db("pet-haven");
 		const petsCollection = db.collection("pets");
+		const adoptionRequestsCollection = db.collection("adoptionRequests");
 
+		/* Adoption Requests Collection */
+
+		/* Pets Collection */
 		// App New pet
 		app.post("/pet", async (req, res) => {
 			const petData = req.body;
 			const result = await petsCollection.insertOne(petData);
+			res.json(result);
+		});
+
+		// Get Particular User Pets
+		app.get("/mypets/:userId", async (req, res) => {
+			const { userId } = req.params;
+			const result = await petsCollection
+				.find({
+					userId: userId,
+				})
+				.toArray();
 			res.json(result);
 		});
 
