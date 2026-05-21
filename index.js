@@ -22,6 +22,33 @@ const client = new MongoClient(uri, {
 	},
 });
 
+const { createRemoteJWKSet, jwtVerify } = require("jose-cjs");
+
+const JWKS = createRemoteJWKSet(
+	new URL(`${process.env.CLIENT_SIDE_URL}/api/auth/jwks`),
+);
+
+const verifyToken = async (req, res, next) => {
+	const authHeader = req?.headers.authorization;
+
+	if (!authHeader) {
+		return res.status(401).json({ message: "Unauthorized" });
+	}
+
+	const token = authHeader.split(" ")[1];
+
+	if (!token) {
+		return res.status(401).json({ message: "Unauthorized" });
+	}
+
+	try {
+		const { payload } = await jwtVerify(token, JWKS);
+		next();
+	} catch (error) {
+		return res.status(403).json({ message: "Forbidden" });
+	}
+};
+
 async function run() {
 	try {
 		await client.connect();
@@ -31,7 +58,7 @@ async function run() {
 
 		/* Adoption Requests Collection */
 		// Create New Adoption Request
-		app.post("/adoption", async (req, res) => {
+		app.post("/adoption", verifyToken, async (req, res) => {
 			const adoptionRequestData = req.body;
 			const result =
 				await adoptionRequestsCollection.insertOne(adoptionRequestData);
@@ -39,7 +66,7 @@ async function run() {
 		});
 
 		// Get Particular User Adoption Requests
-		app.get("/adoption/:userId", async (req, res) => {
+		app.get("/adoption/:userId", verifyToken, async (req, res) => {
 			const { userId } = req.params;
 			const result = await adoptionRequestsCollection
 				.find({
@@ -49,19 +76,23 @@ async function run() {
 			res.json(result);
 		});
 
-		// Get Particular Pet Data by petId
-		app.get("/my-pet-adoption-requests/:petId", async (req, res) => {
-			const { petId } = req.params;
-			const result = await adoptionRequestsCollection
-				.find({
-					petId: petId,
-				})
-				.toArray();
-			res.json(result);
-		});
+		// Get Particular User Pets Data by petId
+		app.get(
+			"/my-pet-adoption-requests/:petId",
+			verifyToken,
+			async (req, res) => {
+				const { petId } = req.params;
+				const result = await adoptionRequestsCollection
+					.find({
+						petId: petId,
+					})
+					.toArray();
+				res.json(result);
+			},
+		);
 
 		// Delete Particular User Adoption Request
-		app.delete("/delete-adoption/:id", async (req, res) => {
+		app.delete("/delete-adoption/:id", verifyToken, async (req, res) => {
 			const { id } = req.params;
 			const result = await adoptionRequestsCollection.deleteOne({
 				_id: new ObjectId(id),
@@ -71,45 +102,53 @@ async function run() {
 		});
 
 		// Update Adoption Status
-		app.patch("/update-status/:requestId", async (req, res) => {
-			const { requestId } = req.params;
-			const updatedStatus = req.body;
-			const result = await adoptionRequestsCollection.updateOne(
-				{
-					_id: new ObjectId(requestId),
-				},
-				{
-					$set: updatedStatus,
-				},
-			);
+		app.patch(
+			"/update-status/:requestId",
+			verifyToken,
+			async (req, res) => {
+				const { requestId } = req.params;
+				const updatedStatus = req.body;
+				const result = await adoptionRequestsCollection.updateOne(
+					{
+						_id: new ObjectId(requestId),
+					},
+					{
+						$set: updatedStatus,
+					},
+				);
 
-			res.json(result);
-		});
+				res.json(result);
+			},
+		);
 
 		// Update Adoption Request Count +1
-		app.patch("/adoption-request-count/:id", async (req, res) => {
-			const { id } = req.params;
+		app.patch(
+			"/adoption-request-count/:id",
+			verifyToken,
+			async (req, res) => {
+				const { id } = req.params;
 
-			const result = await petsCollection.updateOne(
-				{
-					_id: new ObjectId(id),
-				},
-				{ $inc: { adoptionRequest: 1 } },
-			);
+				const result = await petsCollection.updateOne(
+					{
+						_id: new ObjectId(id),
+					},
+					{ $inc: { adoptionRequest: 1 } },
+				);
 
-			res.json(result);
-		});
+				res.json(result);
+			},
+		);
 
 		/* Pets Collection */
 		// Add New pet
-		app.post("/pet", async (req, res) => {
+		app.post("/pet", verifyToken, async (req, res) => {
 			const petData = req.body;
 			const result = await petsCollection.insertOne(petData);
 			res.json(result);
 		});
 
 		// Get Particular User Pets
-		app.get("/mypets/:userId", async (req, res) => {
+		app.get("/mypets/:userId", verifyToken, async (req, res) => {
 			const { userId } = req.params;
 			const result = await petsCollection
 				.find({
@@ -122,9 +161,6 @@ async function run() {
 		// Get All Pets - Also Can Searching and Filtering
 		app.get("/pet", async (req, res) => {
 			const { search, category } = req.query;
-
-			console.log(category);
-
 			let query = {};
 
 			// Search by pet name
@@ -146,7 +182,7 @@ async function run() {
 		});
 
 		// Get Single pet
-		app.get("/pet/:id", async (req, res) => {
+		app.get("/pet/:id", verifyToken, async (req, res) => {
 			const { id } = req.params;
 
 			const result = await petsCollection.findOne({
@@ -156,7 +192,7 @@ async function run() {
 		});
 
 		// Update Single Pet
-		app.patch("/pet/:id", async (req, res) => {
+		app.patch("/pet/:id", verifyToken, async (req, res) => {
 			const { id } = req.params;
 			const updatedPetData = req.body;
 
@@ -171,7 +207,7 @@ async function run() {
 		});
 
 		// Delete Single Pet
-		app.delete("/pet/:id", async (req, res) => {
+		app.delete("/pet/:id", verifyToken, async (req, res) => {
 			const { id } = req.params;
 
 			const result = await petsCollection.deleteOne({
