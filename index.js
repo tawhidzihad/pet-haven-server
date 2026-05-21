@@ -38,7 +38,28 @@ async function run() {
 			res.json(result);
 		});
 
-		// Update Adoption Request
+		// Get Particular User Adoption Requests
+		app.get("/adoption/:userId", async (req, res) => {
+			const { userId } = req.params;
+			const result = await adoptionRequestsCollection
+				.find({
+					userId: userId,
+				})
+				.toArray();
+			res.json(result);
+		});
+
+		// Delete Particular User Adoption Request
+		app.delete("/delete-adoption/:id", async (req, res) => {
+			const { id } = req.params;
+			const result = await adoptionRequestsCollection.deleteOne({
+				_id: new ObjectId(id),
+			});
+
+			res.json(result);
+		});
+
+		// Update Adoption Request Count +1
 		app.patch("/adoption-request-count/:id", async (req, res) => {
 			const { id } = req.params;
 
@@ -47,6 +68,20 @@ async function run() {
 					_id: new ObjectId(id),
 				},
 				{ $inc: { adoptionRequest: 1 } },
+			);
+
+			res.json(result);
+		});
+
+		// Update Adoption Request Count -1
+		app.patch("/adoption-request-count-remove/:id", async (req, res) => {
+			const { id } = req.params;
+
+			const result = await petsCollection.updateOne(
+				{
+					_id: new ObjectId(id),
+				},
+				{ $inc: { adoptionRequest: -1 } },
 			);
 
 			res.json(result);
