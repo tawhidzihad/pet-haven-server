@@ -49,12 +49,39 @@ async function run() {
 			res.json(result);
 		});
 
+		// Get Particular Pet Data by petId
+		app.get("/my-pet-adoption-requests/:petId", async (req, res) => {
+			const { petId } = req.params;
+			const result = await adoptionRequestsCollection
+				.find({
+					petId: petId,
+				})
+				.toArray();
+			res.json(result);
+		});
+
 		// Delete Particular User Adoption Request
 		app.delete("/delete-adoption/:id", async (req, res) => {
 			const { id } = req.params;
 			const result = await adoptionRequestsCollection.deleteOne({
 				_id: new ObjectId(id),
 			});
+
+			res.json(result);
+		});
+
+		// Update Adoption Status
+		app.patch("/update-status/:requestId", async (req, res) => {
+			const { requestId } = req.params;
+			const updatedStatus = req.body;
+			const result = await adoptionRequestsCollection.updateOne(
+				{
+					_id: new ObjectId(requestId),
+				},
+				{
+					$set: updatedStatus,
+				},
+			);
 
 			res.json(result);
 		});
@@ -68,20 +95,6 @@ async function run() {
 					_id: new ObjectId(id),
 				},
 				{ $inc: { adoptionRequest: 1 } },
-			);
-
-			res.json(result);
-		});
-
-		// Update Adoption Request Count -1
-		app.patch("/adoption-request-count-remove/:id", async (req, res) => {
-			const { id } = req.params;
-
-			const result = await petsCollection.updateOne(
-				{
-					_id: new ObjectId(id),
-				},
-				{ $inc: { adoptionRequest: -1 } },
 			);
 
 			res.json(result);
@@ -106,9 +119,29 @@ async function run() {
 			res.json(result);
 		});
 
-		// Get All Pets
+		// Get All Pets - Also Can Searching and Filtering
 		app.get("/pet", async (req, res) => {
-			const result = await petsCollection.find().toArray();
+			const { search, category } = req.query;
+
+			console.log(category);
+
+			let query = {};
+
+			// Search by pet name
+			if (search) {
+				query.petName = {
+					$regex: search,
+					$options: "i",
+				};
+			}
+
+			// Filter by category
+			if (category) {
+				query.species = category;
+			}
+
+			const result = await petsCollection.find(query).toArray();
+
 			res.json(result);
 		});
 
