@@ -30,9 +30,30 @@ async function run() {
 		const adoptionRequestsCollection = db.collection("adoptionRequests");
 
 		/* Adoption Requests Collection */
+		// Create New Adoption Request
+		app.post("/adoption", async (req, res) => {
+			const adoptionRequestData = req.body;
+			const result =
+				await adoptionRequestsCollection.insertOne(adoptionRequestData);
+			res.json(result);
+		});
+
+		// Update Adoption Request
+		app.patch("/adoption-request-count/:id", async (req, res) => {
+			const { id } = req.params;
+
+			const result = await petsCollection.updateOne(
+				{
+					_id: new ObjectId(id),
+				},
+				{ $inc: { adoptionRequest: 1 } },
+			);
+
+			res.json(result);
+		});
 
 		/* Pets Collection */
-		// App New pet
+		// Add New pet
 		app.post("/pet", async (req, res) => {
 			const petData = req.body;
 			const result = await petsCollection.insertOne(petData);
